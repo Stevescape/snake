@@ -19,11 +19,23 @@ pellet = models.Pellet(SCREEN_WIDTH, SCREEN_HEIGHT)
 score = 0
 gameOver = False
 
+inputQueue = []
+
+def addQ(dir):
+    if len(inputQueue) > 3:
+        return
+    inputQueue.append(dir)
+
+def popQ():
+    if len(inputQueue) <= 0:
+        return
+    return inputQueue.pop(0)
+
 def renderScore():
-    font = pygame.font.Font('freesansbold.ttf', 10)
+    font = pygame.font.Font('freesansbold.ttf', 20)
     text = font.render(f'Score {score}', True, (0, 255, 0), (0, 0, 255))
     textRect = text.get_rect()
-    textRect.center = (25, 15)
+    textRect.center = (45, 25)
     screen.blit(text, textRect)
 
 def renderGame():
@@ -74,16 +86,25 @@ def resetGame():
     score = 0
 
 def processKeyEvent(key):
-    if key == pygame.K_a:
-        player.updateDir(WEST)
-    elif key == pygame.K_w:
-        player.updateDir(NORTH)
-    elif key == pygame.K_d:
-        player.updateDir(EAST)
-    elif key == pygame.K_s:
-        player.updateDir(SOUTH)
+    dir = None
+    if key in [pygame.K_a, pygame.K_LEFT]:
+        dir = WEST
+    elif key in [pygame.K_w, pygame.K_UP]:
+        dir = NORTH
+    elif key in [pygame.K_d, pygame.K_RIGHT]:
+        dir = EAST
+    elif key in [pygame.K_s, pygame.K_DOWN]:
+        dir = SOUTH
     elif key == pygame.K_r:
         resetGame()
+        return
+    
+    if dir != None:
+        addQ(dir)
+
+def processInput():
+    if len(inputQueue) > 0:
+        player.updateDir(popQ())
 
 while keepRunning:
     for event in pygame.event.get():
@@ -92,6 +113,7 @@ while keepRunning:
         if event.type == pygame.KEYDOWN:
             processKeyEvent(event.key)
 
+    processInput()
     # fill the screen with a color to wipe away anything from last frame
     screen.fill("black")
 
