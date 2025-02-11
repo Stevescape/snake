@@ -12,7 +12,7 @@ class DQNAgent:
         self.gamma = 0.95  # Discount factor
         self.epsilon = 1  # Exploration rate
         self.epsilon_min = 0.01
-        self.epsilon_decay = 0.995
+        self.epsilon_decay = 0.99
         self.learning_rate = 0.001
         self.batch_size = 64
         self.maxlen = 50000
@@ -20,6 +20,8 @@ class DQNAgent:
         self.store = None
         self.load = load
         self.model = self._build_model()
+        self.targetModel = tf.keras.models.clone_model(self.model)
+        self.targetModel.set_weights(self.model.get_weights())
 
     def _load_model(self):
         i = 1
@@ -132,6 +134,13 @@ class DQNAgent:
         # Clear memory to avoid excessive usage
         while len(self.memory) > self.maxlen:
             self.memory.pop(0)
+
+        if self.generation % 10 == 0:
+            print("Updating Target Machine")
+            self.updateTarget()
         # Decay epsilon to reduce exploration over time
         if self.epsilon > self.epsilon_min:
             self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
+
+    def updateTarget(self):
+        self.targetModel.set_weights(self.model.get_weights())

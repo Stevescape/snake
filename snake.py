@@ -64,25 +64,6 @@ def get_state():
     food_up = food_y < head_y
     food_down = food_y > head_y
 
-
-    grid_width = len(range(0, SCREEN_WIDTH, BLOCKSIZE+10)) + 2
-    grid_height = len(range(0, SCREEN_HEIGHT, BLOCKSIZE+10)) + 2
-    grid = [[0 for _ in range(grid_width)] for _ in range(grid_height)]
-
-    # Out of bounds
-    for y in range(grid_height):
-        for x in range(grid_width):
-            if x == 0 or y == 0 or x == grid_width-1 or y == grid_height-1:
-                grid[y][x] = -1
-
-    snakePos = player.get_pos()
-    for x, y in snakePos:
-        grid[y//(BLOCKSIZE+10)+1][x//(BLOCKSIZE+10)+1] = 1
-    grid[head_y//(BLOCKSIZE+10)+1][head_x//(BLOCKSIZE+10)+1] = 2
-    grid[food_y//(BLOCKSIZE+10)+1][food_x//(BLOCKSIZE+10)+1] = 3
-    
-    grid = np.array(grid).flatten()
-
     state = np.array([
         danger_north,
         danger_east,
@@ -100,12 +81,7 @@ def get_state():
         food_down
     ], dtype=int)
 
-    return np.concatenate((state, grid))
-<<<<<<< Updated upstream
-=======
-
-
->>>>>>> Stashed changes
+    return state
 
 def addQ(dir):
     if len(inputQueue) > 3:
@@ -294,13 +270,10 @@ prev_step_count = float('inf')
 
 # Game Training
 num_episodes = 10000  # Train for 1000 games
-grid_width = len(range(0, SCREEN_WIDTH, BLOCKSIZE+10)) + 2
-grid_height = len(range(0, SCREEN_HEIGHT, BLOCKSIZE+10)) + 2
-
-state_size = 12 + (grid_width*grid_height) # Based on our get_state() function
+state_size = 12 # Based on our get_state() function
 action_size = 4    
 bot = agent.DQNAgent(state_size, action_size)
-death_cap = -1000
+death_cap = -50
 
 for episode in range(num_episodes):
     print(f"Starting Episode {episode}")
@@ -335,7 +308,7 @@ for episode in range(num_episodes):
         next_state = get_state()
         next_state = np.reshape(next_state, [1, state_size])
 
-        reward = calcReward() + 0.1
+        reward = calcReward()
         print(reward)
 
         bot.remember(prev_state, action, reward, next_state, gameOver)
