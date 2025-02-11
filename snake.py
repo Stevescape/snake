@@ -64,31 +64,46 @@ def get_state():
     food_up = food_y < head_y
     food_down = food_y > head_y
 
-
-    grid_width = len(range(0, SCREEN_WIDTH, BLOCKSIZE+10)) + 2
-    grid_height = len(range(0, SCREEN_HEIGHT, BLOCKSIZE+10)) + 2
-    grid = [[0 for _ in range(grid_width)] for _ in range(grid_height)]
-
-    # Out of bounds
-    for y in range(grid_height):
-        for x in range(grid_width):
-            if x == 0 or y == 0 or x == grid_width-1 or y == grid_height-1:
-                grid[y][x] = -1
-
-    snakePos = player.get_pos()
-    for x, y in snakePos:
-        grid[y//(BLOCKSIZE+10)+1][x//(BLOCKSIZE+10)+1] = 1
-    grid[head_y//(BLOCKSIZE+10)+1][head_x//(BLOCKSIZE+10)+1] = 2
-    grid[food_y//(BLOCKSIZE+10)+1][food_x//(BLOCKSIZE+10)+1] = 3
+    grid_width = [x for x in range(player.getHead().x-((BLOCKSIZE+10)*4), player.getHead().x+((BLOCKSIZE+10)*5), BLOCKSIZE+10)]
+    grid_height = [x for x in range(player.getHead().y-((BLOCKSIZE+10)*4), player.getHead().y+((BLOCKSIZE+10)*5), BLOCKSIZE+10)]
     
+    grid_pos = [(x, y) for x in grid_width for y in grid_height]
+    snake_pos = player.get_pos()[1:]
+    food_pos = (food_x, food_y)
+
+    grid = np.zeros((9, 9))
+    for tup in grid_pos:
+        x = tup[0]
+        y = tup[1]
+        if tup in snake_pos or coordsOutOfBounds(tup):
+            grid[grid_height.index(y)][grid_width.index(x)] = 1
+        if tup == (head_x, head_y):
+            grid[grid_height.index(y)][grid_width.index(x)] = 2
+        if tup == food_pos:
+            grid[grid_height.index(y)][grid_width.index(x)] = 3
+    
+    printGrid(grid)
+
     grid = np.array(grid).flatten()
 
-    state = np.array([
-        danger_north,
-        danger_east,
-        danger_south,
-        danger_west,
+    # state = np.array([
+    #     danger_north,
+    #     danger_east,
+    #     danger_south,
+    #     danger_west,
 
+    #     is_direction_left,
+    #     is_direction_right,
+    #     is_direction_up,
+    #     is_direction_down,
+
+    #     food_left,
+    #     food_right,
+    #     food_up,
+    #     food_down
+    # ], dtype=int)
+
+    state = np.array([
         is_direction_left,
         is_direction_right,
         is_direction_up,
@@ -101,11 +116,20 @@ def get_state():
     ], dtype=int)
 
     return np.concatenate((state, grid))
-<<<<<<< Updated upstream
-=======
 
-
->>>>>>> Stashed changes
+def printGrid(grid):
+    for row in grid:
+        r = ""
+        for element in row:
+            if element == 0:
+                r += "⬜"
+            elif element == 1:
+                r += "🟥"
+            elif element == 2:
+                r += "🟦"
+            elif element == 3:
+                r += "⬛"
+        print(r)
 
 def addQ(dir):
     if len(inputQueue) > 3:
@@ -147,9 +171,17 @@ def renderGame():
 def outOfBounds(ent1):
     return (
         ent1.x < 0 or 
-        ent1.x + BLOCKSIZE > SCREEN_WIDTH or 
+        ent1.x + BLOCKSIZE+10 > SCREEN_WIDTH or 
         ent1.y < 0 or 
-        ent1.y + BLOCKSIZE > SCREEN_HEIGHT
+        ent1.y + BLOCKSIZE+10 > SCREEN_HEIGHT
+    )
+
+def coordsOutOfBounds(tup):
+    return (
+        tup[0] < 0 or 
+        tup[0] + BLOCKSIZE+10 > SCREEN_WIDTH or 
+        tup[1] < 0 or 
+        tup[1] + BLOCKSIZE+10 > SCREEN_HEIGHT
     )
 
 def updateGame():
@@ -230,6 +262,9 @@ def processKeyEvent(key):
             bot.store = None
     elif key == pygame.K_k:
         saveModel()
+    elif key == pygame.K_p:
+        global pause
+        pause = False if pause else True
     
     if dir != None:
         addQ(dir)
@@ -246,9 +281,9 @@ def calcReward():
         reward = 20
         gotPellet = False
         if step_count < prev_step_count:
-            reward += 2
+            reward += 10
         elif step_count >= prev_step_count*2:
-            reward -= 2
+            reward -= 5
         prev_step_count = step_count
         step_count = 0
         return reward
@@ -291,16 +326,14 @@ pellet = spawnPellet()
 inputQueue = []
 step_count = 0
 prev_step_count = float('inf')
+pause = False
 
 # Game Training
 num_episodes = 10000  # Train for 1000 games
-grid_width = len(range(0, SCREEN_WIDTH, BLOCKSIZE+10)) + 2
-grid_height = len(range(0, SCREEN_HEIGHT, BLOCKSIZE+10)) + 2
-
-state_size = 12 + (grid_width*grid_height) # Based on our get_state() function
+state_size = 8 + 81 # Based on our get_state() function
 action_size = 4    
 bot = agent.DQNAgent(state_size, action_size)
-death_cap = -1000
+death_cap = -50
 
 for episode in range(num_episodes):
     print(f"Starting Episode {episode}")
@@ -315,6 +348,8 @@ for episode in range(num_episodes):
                 exit()
             if event.type == pygame.KEYDOWN:
                 processKeyEvent(event.key)
+        if pause:
+            continue
 
         action = bot.act(state)
         prev_state = state
@@ -335,7 +370,7 @@ for episode in range(num_episodes):
         next_state = get_state()
         next_state = np.reshape(next_state, [1, state_size])
 
-        reward = calcReward() + 0.1
+        reward = calcReward()
         print(reward)
 
         bot.remember(prev_state, action, reward, next_state, gameOver)

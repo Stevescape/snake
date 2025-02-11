@@ -20,6 +20,8 @@ class DQNAgent:
         self.store = None
         self.load = load
         self.model = self._build_model()
+        self.targetModel = tf.keras.models.clone_model(self.model)
+        self.targetModel.set_weights(self.model.get_weights())
 
     def _load_model(self):
         i = 1
@@ -113,8 +115,8 @@ class DQNAgent:
         dones = np.array([experience[4] for experience in batch])  # Done flags
 
         # Predict Q-values for current states and next states in a single batch call
-        q_values = self.model.predict(states)
-        q_values_next = self.model.predict(next_states)
+        q_values = self.targetModel.predict(states)
+        q_values_next = self.targetModel.predict(next_states)
 
         # Update Q-values for each experience in the batch
         for i in range(len(batch)):
@@ -132,6 +134,14 @@ class DQNAgent:
         # Clear memory to avoid excessive usage
         while len(self.memory) > self.maxlen:
             self.memory.pop(0)
+
+        if self.generation % 10 == 0:
+            print("Updating Target Network")
+            self.update_target_network()
+
         # Decay epsilon to reduce exploration over time
         if self.epsilon > self.epsilon_min:
             self.epsilon = max(self.epsilon * self.epsilon_decay, self.epsilon_min)
+
+    def update_target_network(self):
+        self.targetModel.set_weights(self.model.get_weights())
