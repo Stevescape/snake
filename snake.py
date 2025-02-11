@@ -101,6 +101,11 @@ def get_state():
     ], dtype=int)
 
     return np.concatenate((state, grid))
+<<<<<<< Updated upstream
+=======
+
+
+>>>>>>> Stashed changes
 
 def addQ(dir):
     if len(inputQueue) > 3:
