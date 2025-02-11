@@ -102,7 +102,6 @@ def get_state():
 
     return np.concatenate((state, grid))
 
-
 def addQ(dir):
     if len(inputQueue) > 3:
         return
