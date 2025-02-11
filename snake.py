@@ -84,7 +84,6 @@ def get_state():
     return state
 
 
-
 def addQ(dir):
     if len(inputQueue) > 3:
         return
@@ -221,7 +220,7 @@ def processInput():
 def calcReward():
     global gotPellet, step_count, prev_step_count
     if gotPellet:
-        reward = 5
+        reward = 20
         gotPellet = False
         if step_count < prev_step_count:
             reward += 2
@@ -246,6 +245,7 @@ def calcReward():
         death_amount = -10 + ((bot.generation // 100) * -20)
         if death_amount < death_cap:
             death_amount = death_cap
+
         total_reward = death_amount  # Large penalty for game over 
         print(f"Death Amount: {death_amount}")
     
@@ -309,13 +309,14 @@ for episode in range(num_episodes):
         next_state = get_state()
         next_state = np.reshape(next_state, [1, state_size])
 
-        reward = calcReward()        
+        reward = calcReward() + 0.1
         print(reward)
 
         bot.remember(prev_state, action, reward, next_state, gameOver)
 
         state = next_state
         totalReward += reward
+        totalReward = round(totalReward, 2)
 
         # flip() the display to put your work on screen
         pygame.display.flip()
