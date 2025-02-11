@@ -5,7 +5,7 @@ import numpy as np
 import random
 
 class DQNAgent:
-    def __init__(self, state_size, action_size):
+    def __init__(self, state_size, action_size, load=False):
         self.state_size = state_size
         self.action_size = action_size
         self.memory = []
@@ -15,10 +15,11 @@ class DQNAgent:
         self.epsilon_decay = 0.995
         self.learning_rate = 0.001
         self.batch_size = 64
-        self.model = self._build_model()
         self.maxlen = 50000
         self.generation = 0
         self.store = None
+        self.load = load
+        self.model = self._build_model()
 
     def _load_model(self):
         i = 1
@@ -39,7 +40,15 @@ class DQNAgent:
             return tf.keras.models.load_model(f"rons/RonV{j}.keras", compile=False)
 
     def _build_model(self):
-        model = self._load_model()
+        if self.load:
+            model = self._load_model()
+        else:
+            model = tf.keras.Sequential([
+            layers.Dense(24, activation='relu', input_shape=(self.state_size,)),
+            layers.Dense(24, activation='relu'),
+            layers.Dense(self.action_size, activation='linear')
+            ])
+            
         model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.learning_rate),
                       loss='mse')
         return model
