@@ -165,6 +165,11 @@ def resetGame():
     score = 0
     step_count = 0
 
+def saveModel():
+    i = 1
+    while os.path.exists(f"rons/RonV{i}.keras"):
+        i += 1
+    bot.model.save(f"rons/RonV{i}.keras")
 
 def processKeyEvent(key):
     dir = None
@@ -202,10 +207,7 @@ def processKeyEvent(key):
             bot.epsilon = bot.store
             bot.store = None
     elif key == pygame.K_k:
-        i = 1
-        while os.path.exists(f"rons/RonV{i}.keras"):
-            i += 1
-        bot.model.save(f"rons/RonV{i}.keras")
+        saveModel()
     
     if dir != None:
         addQ(dir)
@@ -242,6 +244,8 @@ def calcReward():
     # If the snake collided with the wall or went out of bounds, apply a large negative penalty
     if not keepRunning:
         death_amount = -10 + ((bot.generation // 100) * -20)
+        if death_amount < death_cap:
+            death_amount = death_cap
         total_reward = death_amount  # Large penalty for game over 
         print(f"Death Amount: {death_amount}")
     
@@ -270,6 +274,7 @@ num_episodes = 1000  # Train for 1000 games
 state_size = 12  # Based on our get_state() function
 action_size = 4    
 bot = agent.DQNAgent(state_size, action_size)
+death_cap = -100
 
 for episode in range(num_episodes):
     print(f"Starting Episode {episode}")
@@ -321,4 +326,5 @@ for episode in range(num_episodes):
     bot.train()
     resetGame()
 
+saveModel()
 pygame.quit()
