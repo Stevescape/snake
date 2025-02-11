@@ -193,7 +193,7 @@ def processKeyEvent(key):
     elif key == pygame.K_6:
         clockSpeed = 60
     elif key == pygame.K_7:
-        clockSpeed = 70
+        clockSpeed = 120
     elif key == pygame.K_0:
         if bot.store == None:
             bot.store = bot.epsilon
@@ -241,7 +241,9 @@ def calcReward():
 
     # If the snake collided with the wall or went out of bounds, apply a large negative penalty
     if not keepRunning:
-        total_reward = -10  # Large penalty for game over
+        death_amount = -10 + ((bot.generation // 100) * -20)
+        total_reward = death_amount  # Large penalty for game over 
+        print(f"Death Amount: {death_amount}")
     
     return total_reward
 
@@ -313,7 +315,9 @@ for episode in range(num_episodes):
         # flip() the display to put your work on screen
         pygame.display.flip()
 
-        clock.tick(clockSpeed)     
+        clock.tick(clockSpeed)
+    renderScore()
+    pygame.display.flip()
     bot.train()
     resetGame()
 
