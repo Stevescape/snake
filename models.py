@@ -22,6 +22,10 @@ class Player:
         head.setY(screenY//2)
         head.setDir(NORTH)
         self.head = head
+        self.addBlock()
+        self.addBlock()
+        self.addBlock()
+        self.addBlock()
 
     def setHead(self, head):
         self.head = head
@@ -69,13 +73,14 @@ class Pellet:
 
 
 class Block:
-    def __init__(self):
+    def __init__(self, x=None, y=None):
         self.tail = None
-        self.x = None
-        self.y = None
+        self.x = x
+        self.y = y
         self.speed = BLOCKSIZE+10
         self.direction = NORTH
-    
+
+
     def setTail(self, node):
         self.tail = node
     
