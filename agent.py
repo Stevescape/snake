@@ -12,7 +12,7 @@ class DQNAgent:
         self.gamma = 0.95  # Discount factor
         self.epsilon = 1  # Exploration rate
         self.epsilon_min = 0.01
-        self.epsilon_decay = 0.995
+        self.epsilon_decay = 0.99
         self.learning_rate = 0.001
         self.batch_size = 64
         self.maxlen = 50000
@@ -45,24 +45,33 @@ class DQNAgent:
         if self.load:
             model = self._load_model()
         else:
-            model = tf.keras.Sequential([
-            layers.Dense(24, activation='relu', input_shape=(self.state_size,)),
-            layers.Dense(24, activation='relu'),
-            layers.Dense(self.action_size, activation='linear')
-            ])
+            grid_input = layers.Input(shape=(9, 9, 1))
+            conv1 = layers.Conv2D(32, (3,3), activation='relu')(grid_input)
+            conv2 = layers.Conv2D(64, (3,3), activation='relu')(conv1)
+            flat = layers.Flatten()(conv2)
+
+            food_input = layers.Input(shape=(8,))
+            dense_food = layers.Dense(16, activation='relu')(food_input)
+
+            merged = layers.Concatenate()([flat, dense_food])
+            dense = layers.Dense(64, activation='relu')(merged)
+            output = layers.Dense(4, activation='linear')(dense)
+
+            model = tf.keras.models.Model(inputs=[grid_input, food_input], outputs=output)
             
         model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=self.learning_rate),
                       loss='mse')
         return model
 
-    def remember(self, state, action, reward, next_state, done):
+    def remember(self,grid, state, action, reward, next_grid, next_state, done):
         """Store experience in replay memory."""
-        self.memory.append((state, action, reward, next_state, done))
+        self.memory.append((grid, state, action, reward, next_grid, next_state, done))
 
-    def act(self, state):
+    def act(self, grid, state):
         if np.random.rand() <= self.epsilon:
             return random.randrange(self.action_size)
-        q_values = self.model.predict(state)
+        grid = np.expand_dims(grid, axis=0)
+        q_values = self.model.predict([grid, state])
         print(q_values)
         return np.argmax(q_values[0])
 
@@ -108,15 +117,17 @@ class DQNAgent:
         batch = random.sample(self.memory, self.batch_size)
 
         # Extract states, next_states, actions, and rewards from the batch
-        states = np.array([experience[0].flatten() for experience in batch])  # Current states
-        actions = np.array([experience[1] for experience in batch])  # Actions taken
-        rewards = np.array([experience[2] for experience in batch])  # Rewards received
-        next_states = np.array([experience[3].flatten() for experience in batch])  # Next states
-        dones = np.array([experience[4] for experience in batch])  # Done flags
+        grids = np.array([experience[0] for experience in batch])
+        states = np.array([experience[1].flatten() for experience in batch])  # Current states
+        actions = np.array([experience[2] for experience in batch])  # Actions taken
+        rewards = np.array([experience[3] for experience in batch])  # Rewards received
+        next_grids = np.array([experience[4] for experience in batch])
+        next_states = np.array([experience[5].flatten() for experience in batch])  # Next states
+        dones = np.array([experience[6] for experience in batch])  # Done flags
 
         # Predict Q-values for current states and next states in a single batch call
-        q_values = self.targetModel.predict(states)
-        q_values_next = self.targetModel.predict(next_states)
+        q_values = self.targetModel.predict([grids, states])
+        q_values_next = self.targetModel.predict([next_grids, next_states])
 
         # Update Q-values for each experience in the batch
         for i in range(len(batch)):
@@ -128,7 +139,7 @@ class DQNAgent:
             q_values[i][actions[i]] = target
 
         # Train the model on the entire batch in one step
-        self.model.fit(states, q_values, epochs=1, verbose=0)
+        self.model.fit([grids, states], q_values, epochs=1, verbose=0)
 
 
         # Clear memory to avoid excessive usage

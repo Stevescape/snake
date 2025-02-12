@@ -82,9 +82,11 @@ def get_state():
         if tup == food_pos:
             grid[grid_height.index(y)][grid_width.index(x)] = 3
     
-    printGrid(grid)
+    
 
-    grid = np.array(grid).flatten()
+    grid = np.array([grid]).reshape(9, 9, 1)
+
+    printGrid(grid)
 
     # state = np.array([
     #     danger_north,
@@ -115,20 +117,21 @@ def get_state():
         food_down
     ], dtype=int)
 
-    return np.concatenate((state, grid))
+    return grid, state
 
 def printGrid(grid):
     for row in grid:
         r = ""
-        for element in row:
-            if element == 0:
-                r += "⬜"
-            elif element == 1:
-                r += "🟥"
-            elif element == 2:
-                r += "🟦"
-            elif element == 3:
-                r += "⬛"
+        for elements in row:
+            for element in elements:
+                if element == 0:
+                    r += "⬜"
+                elif element == 1:
+                    r += "🟥"
+                elif element == 2:
+                    r += "🟦"
+                elif element == 3:
+                    r += "⬛"
         print(r)
 
 def addQ(dir):
@@ -155,7 +158,7 @@ def renderScore():
     textRect.top = SCREEN_HEIGHT - 20
     screen.blit(text, textRect)
 
-    text = font.render(f'Step: {step_count} Previous Step: {prev_step_count}', True, (0, 255, 0), (0, 0, 255))
+    text = font.render(f'Step: {step_count} Since Last Pellet: {step_last_pellet}', True, (0, 255, 0), (0, 0, 255))
     textRect = text.get_rect()
     textRect.right = SCREEN_WIDTH - 10
     textRect.top = SCREEN_HEIGHT - 20
@@ -212,12 +215,13 @@ def renderGameOver():
     renderScore()
 
 def resetGame():
-    global gameOver, player, pellet, score, step_count
+    global gameOver, player, pellet, score, step_count, step_last_pellet
     gameOver = False
     player = models.Player(pygame.display.get_window_size()[0], pygame.display.get_window_size()[1])
     pellet = spawnPellet()
     score = 0
     step_count = 0
+    step_last_pellet = 0
 
 def saveModel():
     i = 1
@@ -276,35 +280,34 @@ def processInput():
             player.updateDir(dir)
 
 def calcReward():
-    global gotPellet, step_count, prev_step_count
+    global gotPellet, step_count, step_last_pellet
+    total_reward = 0
+    if step_last_pellet > 100:
+        total_reward -= 1
+
     if gotPellet:
-        reward = 20
+        total_reward += 20
         gotPellet = False
-        if step_count < prev_step_count:
-            reward += 10
-        elif step_count >= prev_step_count*2:
-            reward -= 5
-        prev_step_count = step_count
-        step_count = 0
-        return reward
+        step_last_pellet = 0
+        return total_reward
     
     prevDist = np.sqrt((oldPos[0] - pellet.x)**2 + (oldPos[1] - pellet.y)**2)
     curDist = np.sqrt((player.getHead().x - pellet.x)**2 + (player.getHead().y - pellet.y)**2)
-    total_reward = 0
+    step_last_pellet += 1
     step_count += 1
 
     if curDist < prevDist:
         total_reward += 0.5
     elif curDist > prevDist:
-        total_reward += -0.5
+        total_reward += -1
 
     # If the snake collided with the wall or went out of bounds, apply a large negative penalty
     if not keepRunning:
         death_amount = -10 + ((bot.generation // 100) * -20)
         if death_amount < death_cap:
             death_amount = death_cap
-
-        total_reward = death_amount  # Large penalty for game over 
+        death_amount = -10
+        total_reward += death_amount  # Large penalty for game over 
         print(f"Death Amount: {death_amount}")
     
     return total_reward
@@ -325,19 +328,19 @@ clockSpeed = 10
 pellet = spawnPellet()
 inputQueue = []
 step_count = 0
-prev_step_count = float('inf')
+step_last_pellet = 0
 pause = False
 
 # Game Training
 num_episodes = 10000  # Train for 1000 games
-state_size = 8 + 81 # Based on our get_state() function
+state_size = 8 # Based on our get_state() function
 action_size = 4    
 bot = agent.DQNAgent(state_size, action_size)
 death_cap = -50
 
 for episode in range(num_episodes):
     print(f"Starting Episode {episode}")
-    state = get_state()  # Get initial state
+    grid, state = get_state()  # Get initial state
     state = np.reshape(state, [1, state_size])
     keepRunning = True
     totalReward = 0
@@ -351,8 +354,9 @@ for episode in range(num_episodes):
         if pause:
             continue
 
-        action = bot.act(state)
+        action = bot.act(grid, state)
         prev_state = state
+        prev_grid = grid
 
         addQ(action)
 
@@ -367,15 +371,16 @@ for episode in range(num_episodes):
             renderGameOver()
             keepRunning = False
 
-        next_state = get_state()
+        next_grid, next_state = get_state()
         next_state = np.reshape(next_state, [1, state_size])
 
         reward = calcReward()
         print(reward)
 
-        bot.remember(prev_state, action, reward, next_state, gameOver)
+        bot.remember(prev_grid, prev_state, action, reward, next_grid, next_state, gameOver)
 
         state = next_state
+        grid = next_grid
         totalReward += reward
         totalReward = round(totalReward, 2)
 
