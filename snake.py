@@ -281,7 +281,7 @@ def processInput():
 
 def calcReward():
     global gotPellet, step_count, step_last_pellet
-    total_reward = 0
+    total_reward = 0.01
     if step_last_pellet > 100:
         total_reward -= 1
 
@@ -307,7 +307,7 @@ def calcReward():
         if death_amount < death_cap:
             death_amount = death_cap
         death_amount = -10
-        total_reward += death_amount  # Large penalty for game over 
+        total_reward = death_amount  # Large penalty for game over 
         print(f"Death Amount: {death_amount}")
     
     return total_reward

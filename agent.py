@@ -12,7 +12,7 @@ class DQNAgent:
         self.gamma = 0.95  # Discount factor
         self.epsilon = 1  # Exploration rate
         self.epsilon_min = 0.01
-        self.epsilon_decay = 0.99
+        self.epsilon_decay = 0.995
         self.learning_rate = 0.001
         self.batch_size = 64
         self.maxlen = 50000

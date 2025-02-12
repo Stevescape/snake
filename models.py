@@ -31,6 +31,8 @@ class Player:
         self.head = head
         self.addBlock()
         self.addBlock()
+        self.addBlock()
+        self.addBlock()
 
     def setHead(self, head):
         self.head = head
@@ -43,6 +45,12 @@ class Player:
 
     def renderPlayer(self, screen):
         self.head.renderBlock(screen, (0, 255, 255))
+
+    def turnLeft(self):
+        self.direction = (self.direction-1) % 4
+
+    def turnRight(self):
+        self.direction = (self.direction+1) % 4
 
     def updatePos(self):
         self.head.updatePos()
