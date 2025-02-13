@@ -44,6 +44,12 @@ class Player:
     def renderPlayer(self, screen):
         self.head.renderBlock(screen, (0, 255, 255))
 
+    def turnLeft(self):
+        self.head.setDir((self.head.direction-1)%4)
+
+    def turnRight(self):
+        self.head.setDir((self.head.direction+1)%4)
+
     def updatePos(self):
         self.head.updatePos()
 
@@ -64,6 +70,9 @@ class Player:
         
     def get_pos(self):
         return self.head.get_pos()
+    
+    def getLen(self):
+        return self.head.getLen()
         
         
 class Pellet:
@@ -160,5 +169,10 @@ class Block:
         if self.tail == None:
             return arr
         return arr + self.tail.get_pos()
+    
+    def getLen(self):
+        if self.tail == None:
+            return 1
+        return 1 + self.tail.getLen()
 
         

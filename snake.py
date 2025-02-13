@@ -10,6 +10,11 @@ NORTH = 0
 EAST = 1
 SOUTH = 2
 WEST = 3
+
+LEFT = 0
+STRAIGHT = 1
+RIGHT = 2
+
 BLOCKSIZE = models.BLOCKSIZE
 
 SCREEN_WIDTH = 720
@@ -75,9 +80,9 @@ def get_state():
     for tup in grid_pos:
         x = tup[0]
         y = tup[1]
-        if tup in snake_pos or coordsOutOfBounds(tup):
+        if coordsOutOfBounds(tup):
             grid[grid_height.index(y)][grid_width.index(x)] = 1
-        if tup == (head_x, head_y):
+        if tup in snake_pos or tup == (head_x, head_y):
             grid[grid_height.index(y)][grid_width.index(x)] = 2
         if tup == food_pos:
             grid[grid_height.index(y)][grid_width.index(x)] = 3
@@ -105,17 +110,34 @@ def get_state():
     #     food_down
     # ], dtype=int)
 
-    state = np.array([
-        is_direction_left,
-        is_direction_right,
-        is_direction_up,
-        is_direction_down,
+    state = [is_direction_left,
+            is_direction_right,
+            is_direction_up,
+            is_direction_down]
+    
+    if is_direction_up:
+        state.append(food_left)
+        state.append(food_up)
+        state.append(food_right)
+        state.append(food_down)
+    elif is_direction_right:
+        state.append(food_up)
+        state.append(food_right)
+        state.append(food_down)
+        state.append(food_left)
+    elif is_direction_down:
+        state.append(food_right)
+        state.append(food_down)
+        state.append(food_left)
+        state.append(food_up)
+    elif is_direction_left:
+        state.append(food_down)
+        state.append(food_left)
+        state.append(food_up)
+        state.append(food_right)
 
-        food_left,
-        food_right,
-        food_up,
-        food_down
-    ], dtype=int)
+    state = np.array(state, dtype=int)
+    print(state)
 
     return grid, state
 
@@ -234,10 +256,12 @@ def processKeyEvent(key):
     global clockSpeed
     if key in [pygame.K_a, pygame.K_LEFT]:
         dir = WEST
+        addQ(LEFT)
     elif key in [pygame.K_w, pygame.K_UP]:
         dir = NORTH
     elif key in [pygame.K_d, pygame.K_RIGHT]:
         dir = EAST
+        addQ(RIGHT)
     elif key in [pygame.K_s, pygame.K_DOWN]:
         dir = SOUTH
     elif key == pygame.K_r:
@@ -269,15 +293,14 @@ def processKeyEvent(key):
     elif key == pygame.K_p:
         global pause
         pause = False if pause else True
-    
-    if dir != None:
-        addQ(dir)
 
 def processInput():
     if len(inputQueue) > 0:
-        dir = popQ()
-        if (dir + 2) % 4 != player.getHead().direction:
-            player.updateDir(dir)
+        move = popQ()
+        if move == LEFT:
+            player.turnLeft()
+        if move == RIGHT:
+            player.turnRight()
 
 def calcReward():
     global gotPellet, step_count, step_last_pellet
@@ -286,7 +309,7 @@ def calcReward():
         total_reward -= 1
 
     if gotPellet:
-        total_reward += 20
+        total_reward += 100
         gotPellet = False
         step_last_pellet = 0
         return total_reward
@@ -334,7 +357,7 @@ pause = False
 # Game Training
 num_episodes = 10000  # Train for 1000 games
 state_size = 8 # Based on our get_state() function
-action_size = 4    
+action_size = 3
 bot = agent.DQNAgent(state_size, action_size)
 death_cap = -50
 

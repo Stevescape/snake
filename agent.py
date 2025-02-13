@@ -50,12 +50,12 @@ class DQNAgent:
             conv2 = layers.Conv2D(64, (3,3), activation='relu')(conv1)
             flat = layers.Flatten()(conv2)
 
-            food_input = layers.Input(shape=(8,))
+            food_input = layers.Input(shape=(self.state_size,))
             dense_food = layers.Dense(16, activation='relu')(food_input)
 
             merged = layers.Concatenate()([flat, dense_food])
             dense = layers.Dense(64, activation='relu')(merged)
-            output = layers.Dense(4, activation='linear')(dense)
+            output = layers.Dense(3, activation='linear')(dense) # 3 outputs for left, right, or straight
 
             model = tf.keras.models.Model(inputs=[grid_input, food_input], outputs=output)
             
